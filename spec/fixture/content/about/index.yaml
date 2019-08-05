@@ -1,0 +1,4 @@
+component: components/test
+props:
+  title: Another test page
+  header: this is another test

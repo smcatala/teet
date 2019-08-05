@@ -1,7 +1,7 @@
 !.gitkeep
-bower_components/
 build/
 dist/
+esm/
 node_modules/
 spec/reports/
 tmp/

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "lib": ["dom"],
+    "types": [],
+    "declaration": true,
+    "downlevelIteration": true,
+    "noEmitHelpers": true,
+    "importHelpers": false,
+    "emitDecoratorMetadata": false,
+    "experimentalDecorators": false,
+    "removeComments": true,
+    "noImplicitAny": false,
+    "noImplicitThis": true,
+    "suppressImplicitAnyIndexErrors": true
+  }
+}

@@ -4,51 +4,65 @@
 
 teet static websites from jsx and yaml, no strings attached.
 
-JSX files export a component factory:\
-`src/components/homepage/index.jsx`:
+# Generate a static website from YAML and JSX
 
-```jsx
-/** @jsx createElement */
-import { createElement } from 'react'
-import marked from 'marked'
-import { relative } from 'path'
+first off, `teet` makes as few assumptions as possible,
+focusing on rendering HTML files from YAML and JSX files where it is told to,
+and remaining as flexible as possible.
 
-/**
- * `pages` is a map of `path` to { factory, path, props } page objects
- *   of all YAML-specified pages,
- *   where `factory` is the page's component factory (like this one)
- */
-export default function ({ pages, path, props }) {
-  // this example factory is sync, but it doesn't have to be:
-  // it could also be async, i.e. return a Promise,
-  // e.g. to fetch additional content from the filesystem or an API
-  return <HomePage path={path} {...props} />
-}
+to illustrate how `teet` operates, the default settings are chosen.
+within a configurable source `root` directory, `src/` by default,
+are two folders:
 
-function HomePage ({ body, path, title }) {
-  const lang = path.split('/').pop()
-  return (
-    <html lang={lang}>
-      <head>
-        <title>{title}</title>
-        <meta charSet='UTF-8' />
-        <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-        <link rel='manifest' href={relative(path, '/assets/manifest.json')} />
-      </head>
-      <body>{marked(body)}</body>
-    </html>
-  )
-}
+- one for the [JSX]() layout files, e.g. `components/`,
+- the other for the [YAML](https://yaml.org/) content files,
+  `content/` by default.
+
+```
+src
+├── components
+│   └── page.jsx
+└── content
+    ├── about
+    │   ├── en
+    │   │   └── index.yml
+    │   └── fr
+    │       └── index.yml
+    ├── en
+    │   └── index.yml
+    └── fr
+        └── index.yml
 ```
 
-YAML files are self-explanatory:\
-`src/content/en/index.yaml`
+`teet` will look for all [YAML](https://yaml.org/) files in the `root` folder
+that match a `source` glob string, e.g. `content/**/*.yml`.
+it will map the directory structure under the base path of the `source` glob
+(`content/` in this example)
+to that of its output in a specifiable `target` directory, `dist` by default:
+
+```
+dist
+├── about
+│   ├── en
+│   │   └── index.html
+│   └── fr
+│       └── index.html
+├── en
+│   └── index.html
+└── fr
+    └── index.html
+```
+
+each [YAML](https://yaml.org/) file specifies the HTML page it maps to, e.g.:\
+`src/content/en/index.yml`
 
 ```yaml
 # path of the JSX component factory this page is instantiated from.
-# - absolute from the project's source root (by default `src/`)
-# - or relative from this file's directory, e.g. `../../components/homepage`
-factory: components/homepage
+# - absolute from the project's source `root` (by default `src/`)
+# - or relative from this file's directory, e.g. `../../components/page`
+factory: components/page
+
+# props supplied to the JSX component factory.
 props:
   title: Teet static websites
   body: |
@@ -56,16 +70,110 @@ props:
     Design your website's pages with JSX and specify their content with YAML
 ```
 
-output from `teet`:\
+[YAML](https://yaml.org/) files are parsed to page description objects
+`{ factory, path, props }`,
+which include the JSX component `factory` from the referenced JSX file,
+the parsed `props`, and the `path` of the target HTML file,
+relative to the `target` directory (`dist/` in this example).
+
+JSX files expose the component factory as default export,
+from which html pages are rendered:\
+`src/components/page.jsx`:
+
+```jsx
+/** @jsx createElement */
+import { createElement } from 'react'
+import marked from 'marked'
+import { dirname, relative, sep } from 'path'
+
+/**
+ * `pages` is a map of `path` to { factory, path, props }
+ *   page description objects for all YAML-specified pages,
+ *   where `factory` is the page's component factory (like this one).
+ *
+ * `path` is the path of the target html file, relative to the `target` folder.
+ *
+ * `props` is from the YAML file
+ */
+export default function ({ pages, path, props }) {
+  // this example factory is synchronous, but it doesn't have to be:
+  // it could also be async, i.e. return a Promise,
+  // e.g. to fetch additional content from the filesystem or an API
+  return <Page path={path} {...props} />
+}
+
+// in this example, we adopt the convention that html files are hosted
+// in their corresponding locale directory.
+// alternatively, we could simply also have specified the locale
+// in the props (YAML file).
+const locale = path =>
+  dirname(path)
+    .split(sep)
+    .pop()
+
+function Page ({ body, path, title }) {
+  const lang = locale(path)
+  const links = Object.keys(pages)
+    .filter(target => target !== path && locale(target) === lang)
+    .map(target => ({
+      href: relative(dirname(path), dirname(target)),
+      label: pages[target].props.title
+    }))
+  return (
+    <html lang={lang}>
+      <head>
+        <title>{title}</title>
+        <meta charSet='UTF-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+      </head>
+      <body>
+        {marked(body)}
+        <footer>
+          <ul>
+            {links.map(({ href, label }, index) => (
+              <li>
+                <a key={index} href={href}>
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </footer>
+      </body>
+    </html>
+  )
+}
+```
+
+example output from `teet`:\
 `dist/en/index.html`
 
 ```
-<html lang="en"><head><title>Teet static websites</title><meta charSet="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><link rel="manifest" href="../assets/manifest.json"/></head><body><h1>JSX & YAML</h1><p>Design your website's pages with JSX and specify their content with YAML</p></body></html>
+<html lang="en"><head><title>Teet static websites</title><meta charSet="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head><body><h1>JSX & YAML</h1><p>Design your website's pages with JSX and specify their content with YAML</p><footer><ul><li><a href="../about/en">About Teet</a></li></ul></footer></body></html>
 ```
 
-# API v1
+note that `teet` limits itself to rendering the JSX and YAML files
+to their destination HTML files.
+assets such as the site manifest or images should be handled separately.
 
-source root, source glob, and target directory are configurable.
+for example, the manifest could be placed in `src/assets/manifest.json`
+and copied together with other assets from that directory into `dist/assets`,
+e.g. with an `npm` script:
+
+```bash
+mkdirp dist/assets && cpx "src/assets/**" dist/assets
+```
+
+a corresponding `<link>` tag could accordingly be added inside the `<head>`
+of the `Page` component:
+
+```jsx
+<link rel='manifest' href={relative(dirname(path), 'assets/image.png')} />
+```
+
+# Usage
+
+`root`, `source` glob, and `target` directory are configurable.
 
 ## CLI
 
@@ -75,10 +183,37 @@ teet [OPTIONS]
 OPTIONS
   -d, --target  target directory
                 default 'dist'
+  -h, --help    output this usage text
   -r, --root    source root directory
                 default 'src'
   -s, --source  glob of source files to compile, relative to source root
-                default 'content/**/*.yml'
+                default 'content/**/*.y*(a)ml'
+```
+
+## Node API
+
+```ts
+import { ReactElement } from 'react'
+export default function (spec: BuildSpec): Promise<void>
+export interface BuildSpec {
+  command: string[]
+  root: string
+  source: string
+  target: string
+}
+export interface ElementSpec<P = any> {
+  factory: (spec: ElementFactorySpec<P>) => ReactElement<P>
+  props: P
+  path: string
+}
+export interface ElementFactorySpec<P> {
+  pages: ElementSpecMap
+  props: P
+  path: string
+}
+export interface ElementSpecMap {
+  [path: string]: ElementSpec
+}
 ```
 
 # MIT License

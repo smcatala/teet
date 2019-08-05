@@ -1,0 +1,10 @@
+teet [OPTIONS]
+
+OPTIONS
+  -d, --target  target directory
+                default 'dist'
+  -h, --help    output this usage text
+  -r, --root    source root directory
+                default 'src'
+  -s, --source  glob of source files to compile, relative to source root
+                default 'content/**/*.y*(a)ml'

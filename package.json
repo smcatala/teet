@@ -1,6 +1,6 @@
 {
   "name": "teet",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "teet static websites from jsx and yaml, no strings attached",
   "main": "cjs/index.js",
   "module": "esm/index.js",

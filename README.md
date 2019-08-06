@@ -10,7 +10,7 @@ first off, `teet` makes as few assumptions as possible,
 focusing on rendering HTML files from YAML and JSX files where it is told to,
 and remaining as flexible as possible.
 
-## project structure
+## Project structure
 
 `teet` will map the directory structure of the source [YAML](https://en.wikipedia.org/wiki/YAML/)
 files to that of the output HTML files.
@@ -68,8 +68,9 @@ dist
 ## YAML
 
 each [YAML](https://en.wikipedia.org/wiki/YAML) file specifies
-the HTML page it maps to. in the above example,
-`src/content/en/index.yml` specifies and maps to `dist/en/index.html`.
+the content of the HTML page it maps to. in the above example,
+`src/content/en/index.yml` maps to `dist/en/index.html`,
+and specifies its content.
 
 `src/content/en/index.yml`
 
@@ -97,6 +98,10 @@ there is no restriction on which properties `props` may contain:
 whatever the factory requires.
 
 ## JSX
+
+[JSX](https://reactjs.org/docs/jsx-in-depth.html) files are referenced
+by [YAML](https://en.wikipedia.org/wiki/YAML/) files.
+they generate a page's layout, i.e. its HTML.
 
 [JSX](https://reactjs.org/docs/jsx-in-depth.html) files expose
 a component factory as default export.
@@ -172,7 +177,7 @@ function Page ({ body, path, title }) {
 ```
 
 Although the above code might unsettle beginners
-because it adds plenty of javascript to the HTML,
+because it mixes plenty of javascript with the HTML,
 it does not have to be that way:
 JSX allows beginners to start with mostly raw HTML, and once confident,
 incrementally add javascript to enhance the page's configurability.
@@ -192,7 +197,7 @@ example output from `teet`:\
 <html lang="en"><head><title>Teet static websites</title><meta charSet="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head><body><h1>JSX & YAML</h1><p>Design your website's pages with JSX and specify their content with YAML</p><footer><ul><li><a href="../about/en">About Teet</a></li></ul></footer></body></html>
 ```
 
-## assets
+## Assets
 
 `teet` limits itself to rendering the JSX and YAML files
 to their destination HTML files.
@@ -223,7 +228,7 @@ Or it could use [Bootstrap](https://getbootstrap.com/),
 e.g. by adding the [CSS RSI link](https://www.bootstrapcdn.com/)
 into the `<head>` of the `Page` component.
 
-## markdown
+## Markdown
 
 finally, as shown in this example,
 [Markdown](https://github.github.com/gfm/#what-is-markdown-) support
@@ -280,7 +285,6 @@ so it exposes corresponding type definitions, useful for coding.
 import { ReactElement } from 'react'
 export default function (spec: BuildSpec): Promise<void>
 export interface BuildSpec {
-  command: string[]
   root: string
   source: string
   target: string
@@ -314,8 +318,8 @@ for many websites and blogs, that's sufficient, and it's best practice.
 Again, the factories can add client-side frameworks if required,
 but `teet` won't do it by default.
 
-and also because `teet` is only around 60 lines of easily maintainable code
-building on hand-picked robust and well-maintained popular dependencies,
+and also because `teet` is less than 60 lines of easily maintainable code
+building on hand-picked, robust and well-maintained popular dependencies.
 
 and also because its documentation is concise.
 
@@ -324,6 +328,13 @@ and also because its documentation is concise.
 a simple single syllable nomen that was still available on npm
 (which is not easy these days)
 and is tricky to pronounce properly, like 'sheet'.
+
+# Mention
+
+if you like or use this project for your websites,
+consider starring it on GitHub,
+or mentioning it in the documentation or README of such websites,
+or even better, on the websites themselves.
 
 # MIT License
 

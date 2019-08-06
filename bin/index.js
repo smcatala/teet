@@ -33,8 +33,7 @@ const teet = require('../')
 
 var argv = minimist(process.argv.slice(2), {
   string: ['target', 'root', 'source'],
-  alias: { d: 'target', h: 'help', r: 'root', s: 'source' },
-  '--': true
+  alias: { d: 'target', h: 'help', r: 'root', s: 'source' }
 })
 
 if (argv.help) {
@@ -43,7 +42,6 @@ if (argv.help) {
 }
 
 const spec = {
-  command: argv['--'].join(' '),
   root: argv.root,
   source: argv.source,
   target: argv.target

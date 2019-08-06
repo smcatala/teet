@@ -49,7 +49,6 @@ const BABEL_CONFIG = require(PKG_JSON_PATH).babel
 require('@babel/register')(BABEL_CONFIG)
 
 export interface BuildSpec {
-  command: string[]
   root: string
   source: string
   target: string
@@ -82,7 +81,6 @@ export interface ElementSpecMap {
 }
 
 export default function ({
-  command,
   root = ROOT,
   source = SOURCE,
   target = TARGET,
@@ -95,11 +93,13 @@ export default function ({
       Promise.all(paths.map(importComponent)).then(toElementSpecMap)
     )
     .then((specs: ElementSpecMap) =>
-      Promise.all(
-        Object.keys(specs).map(path =>
-          render(specs, path).then(command ? pipe : write)
-        )
-      ).then(() => void 0)
+      Promise.all(Object.keys(specs).map(path => render(specs, path)))
+    )
+    .then((pages: { html: string; path: string }[]) =>
+      pages.reduce(
+        (res, page) => res.then(() => write(page)), // sequential writes
+        Promise.resolve()
+      )
     )
 
   function importComponent (path: string): ElementSpec {
@@ -119,17 +119,9 @@ export default function ({
     return Promise.resolve(pages[path])
       .then(({ factory, props }) => factory(cloneDeep({ pages, path, props })))
       .then(element => ({
-        html: renderToStaticMarkup(element),
+        html: renderToStaticMarkup(element) as string,
         path
       }))
-  }
-
-  /**
-   * TODO pipe into command instead of file,
-   * passing environment variables from context (e.g. $teet_path, etc.)
-   */
-  function pipe ({ html, path }: { html: string; path: string }) {
-    return Promise.resolve()
   }
 
   function write ({ html, path }: { html: string; path: string }) {

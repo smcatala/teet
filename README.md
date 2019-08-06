@@ -10,7 +10,7 @@ first off, `teet` makes as few assumptions as possible,
 focusing on rendering HTML files from YAML and JSX files where it is told to,
 and remaining as flexible as possible.
 
-## Directory structure
+## project structure
 
 `teet` will map the directory structure of the source [YAML](https://yaml.org/)
 files to that of the output HTML files.
@@ -114,9 +114,7 @@ import { dirname, relative, sep } from 'path'
  * - `pages`: a map of `path` to { factory, path, props }
  *   page description objects for all YAML-specified pages,
  *   where `factory` is the page's component factory (like this one).
- *
  * - `path`: the path of the target html file, relative to the `target` folder.
- *
  * - `props`: parsed from the YAML file
  */
 export default function ({ pages, path, props }) {
@@ -169,8 +167,11 @@ function Page ({ body, path, title }) {
 }
 ```
 
-`teet` calls the factory with the page description object parsed from YAML
-and renders the returned JSX component to the destination HTML file.
+## HTML output
+
+`teet` calls the JSX component factories referenced in each YAML file
+with the `props` parsed from those as detailed [above](#JSX),
+and renders the returned components to the destination HTML files.
 
 example output from `teet`:\
 `dist/en/index.html`
@@ -178,6 +179,8 @@ example output from `teet`:\
 ```
 <html lang="en"><head><title>Teet static websites</title><meta charSet="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head><body><h1>JSX & YAML</h1><p>Design your website's pages with JSX and specify their content with YAML</p><footer><ul><li><a href="../about/en">About Teet</a></li></ul></footer></body></html>
 ```
+
+## assets
 
 note that `teet` limits itself to rendering the JSX and YAML files
 to their destination HTML files.
@@ -198,15 +201,23 @@ of the `Page` component:
 <link rel='manifest' href={relative(dirname(path), 'assets/image.png')} />
 ```
 
+## CSS
+
 likewise, `teet` does not prescribe how to handle CSS.
 in this example, CSS could be added as component-scoped classes
 with tools such as [TypeStyle](https://typestyle.github.io/).
 
+## markdown
+
 finally, as shown in this example,
-[Markdown](https://github.github.com/gfm/#what-is-markdown-) support is easy to add,
+[Markdown](https://github.github.com/gfm/#what-is-markdown-) support
+is easy to add in the JSX component factories,
 e.g. with [marked](https://www.npmjs.com/package/marked).
+how `markdown` is parsed from the `props` is therefore fully configurable.
 
 # Usage
+
+`teet` is available both as CLI command and as [NodeJS](https://nodejs.org) module.
 
 `root`, `source` glob, and `target` directory are configurable.
 
@@ -226,6 +237,21 @@ OPTIONS
 ```
 
 ## Node API
+
+import as ES module
+
+```js
+import teet from 'teet'
+```
+
+or as CommonJS module
+
+```js
+const teet = require('teet')
+```
+
+`teet` is compiled from [TypeScript](https://www.typescriptlang.org/),
+so it exposes corresponding type definitions, useful for coding.
 
 ```ts
 import { ReactElement } from 'react'
@@ -253,7 +279,7 @@ export interface ElementSpecMap {
 
 # Why
 
-because [Gatsby](https://gatsbyjs.org) et al. are all too bloated,
+because [Gatsby](https://gatsbyjs.org) et al. are way too bloated,
 and so is their output HTML.
 
 unless the JSX component factories explicitly add it to their output,
@@ -264,6 +290,8 @@ the resulting static website hence works as expected, without JS.
 for many websites and blogs, that's sufficient, and it's best practice.
 Again, the factories can add client-side frameworks if required,
 but `teet` won't do it by default.
+
+and because `teet` is only 60 loc, and it's documentation is sweet and concise.
 
 # Name
 

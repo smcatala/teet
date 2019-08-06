@@ -12,14 +12,14 @@ and remaining as flexible as possible.
 
 ## project structure
 
-`teet` will map the directory structure of the source [YAML](https://yaml.org/)
+`teet` will map the directory structure of the source [YAML](https://en.wikipedia.org/wiki/YAML/)
 files to that of the output HTML files.
-the directory structure of the source [YAML](https://yaml.org/) files
+the directory structure of the source [YAML](https://en.wikipedia.org/wiki/YAML/) files
 should therefore reflect the structure of the resulting website.
 apart from that, `teet` makes no further assumptions on where files are located.
 
 `teet` operates from a configurable source `root` folder.
-it will look for all [YAML](https://yaml.org/) files in that `root` folder
+it will look for all [YAML](https://en.wikipedia.org/wiki/YAML/) files in that `root` folder
 that match a `source` glob string.
 
 the `root` folder defaults to `src/`,
@@ -30,7 +30,7 @@ the source directory could be set up as follows:
 
 - a `components/` folder for the [JSX](https://reactjs.org/docs/jsx-in-depth.html)
   layout files,
-- a `content/` directory for the [YAML](https://yaml.org/) content files.
+- a `content/` directory for the [YAML](https://en.wikipedia.org/wiki/YAML/) content files.
 
 ```
 src
@@ -67,7 +67,8 @@ dist
 
 ## YAML
 
-each [YAML](https://yaml.org/) file specifies the HTML page it maps to, e.g.
+each [YAML](https://en.wikipedia.org/wiki/YAML) file specifies
+the HTML page it maps to. in the above example,
 `src/content/en/index.yml` specifies and maps to `dist/en/index.html`.
 
 `src/content/en/index.yml`
@@ -86,19 +87,22 @@ props:
     Design your website's pages with JSX and specify their content with YAML
 ```
 
-[YAML](https://yaml.org/) files are parsed to page description objects
+[YAML](https://en.wikipedia.org/wiki/YAML/) files are parsed to page description objects
 `{ factory, path, props }`,
 which include the JSX component `factory` from the referenced JSX file,
 the parsed `props`, and the `path` of the target HTML file,
 relative to the `target` directory (`dist/` in this example).
 
-there is no restriction on which properties `props` includes:
+there is no restriction on which properties `props` may contain:
 whatever the factory requires.
 
 ## JSX
 
 [JSX](https://reactjs.org/docs/jsx-in-depth.html) files expose
-their component factory as default export.
+a component factory as default export.
+These factories return a React Element from the page description object
+they receive. `teet` renders the resulting React Elements into the HTML
+of the pages.
 
 `src/components/page.jsx`:
 
@@ -167,6 +171,14 @@ function Page ({ body, path, title }) {
 }
 ```
 
+Although the above code might unsettle beginners
+because it adds plenty of javascript to the HTML,
+it does not have to be that way:
+JSX allows beginners to start with mostly raw HTML, and once confident,
+incrementally add javascript to enhance the page's configurability.
+
+JSX is now so widely adopted that documentation and examples abound on the web.
+
 ## HTML output
 
 `teet` calls the JSX component factories referenced in each YAML file
@@ -182,7 +194,7 @@ example output from `teet`:\
 
 ## assets
 
-note that `teet` limits itself to rendering the JSX and YAML files
+`teet` limits itself to rendering the JSX and YAML files
 to their destination HTML files.
 assets such as the site manifest or images should be handled separately.
 
@@ -207,6 +219,10 @@ likewise, `teet` does not prescribe how to handle CSS.
 in this example, CSS could be added as component-scoped classes
 with tools such as [TypeStyle](https://typestyle.github.io/).
 
+Or it could use [Bootstrap](https://getbootstrap.com/),
+e.g. by adding the [CSS RSI link](https://www.bootstrapcdn.com/)
+into the `<head>` of the `Page` component.
+
 ## markdown
 
 finally, as shown in this example,
@@ -216,6 +232,13 @@ e.g. with [marked](https://www.npmjs.com/package/marked).
 how `markdown` is parsed from the `props` is therefore fully configurable.
 
 # Usage
+
+install from npm in your project directory,
+typically as a [DevDependency](https://docs.npmjs.com/specifying-dependencies-and-devdependencies-in-a-package-json-file)
+
+```bash
+npm i -D teet
+```
 
 `teet` is available both as CLI command and as [NodeJS](https://nodejs.org) module.
 
@@ -291,13 +314,16 @@ for many websites and blogs, that's sufficient, and it's best practice.
 Again, the factories can add client-side frameworks if required,
 but `teet` won't do it by default.
 
-and because `teet` is only 60 loc, and it's documentation is sweet and concise.
+and also because `teet` is only around 60 lines of easily maintainable code
+building on hand-picked robust and well-maintained popular dependencies,
+
+and also because its documentation is concise.
 
 # Name
 
-a simple single syllable nomen still available on npm,
-which is not easy these days,
-and tricky to pronounce properly, like 'sheet'.
+a simple single syllable nomen that was still available on npm
+(which is not easy these days)
+and is tricky to pronounce properly, like 'sheet'.
 
 # MIT License
 

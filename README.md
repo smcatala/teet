@@ -10,13 +10,27 @@ first off, `teet` makes as few assumptions as possible,
 focusing on rendering HTML files from YAML and JSX files where it is told to,
 and remaining as flexible as possible.
 
-to illustrate how `teet` operates, the default settings are chosen.
-within a configurable source `root` directory, `src/` by default,
-are two folders:
+## Directory structure
 
-- one for the [JSX]() layout files, e.g. `components/`,
-- the other for the [YAML](https://yaml.org/) content files,
-  `content/` by default.
+`teet` will map the directory structure of the source [YAML](https://yaml.org/)
+files to that of the output HTML files.
+the directory structure of the source [YAML](https://yaml.org/) files
+should therefore reflect the structure of the resulting website.
+apart from that, `teet` makes no further assumptions on where files are located.
+
+`teet` operates from a configurable source `root` folder.
+it will look for all [YAML](https://yaml.org/) files in that `root` folder
+that match a `source` glob string.
+
+the `root` folder defaults to `src/`,
+and the `source` file glob to `content/**/*.y*(a)ml`.
+
+for example, with the default settings,
+the source directory could be set up as follows:
+
+- a `components/` folder for the [JSX](https://reactjs.org/docs/jsx-in-depth.html)
+  layout files,
+- a `content/` directory for the [YAML](https://yaml.org/) content files.
 
 ```
 src
@@ -34,9 +48,7 @@ src
         └── index.yml
 ```
 
-`teet` will look for all [YAML](https://yaml.org/) files in the `root` folder
-that match a `source` glob string, e.g. `content/**/*.yml`.
-it will map the directory structure under the base path of the `source` glob
+`teet` will map the directory structure under the base path of the `source` glob
 (`content/` in this example)
 to that of its output in a specifiable `target` directory, `dist` by default:
 
@@ -53,11 +65,15 @@ dist
     └── index.html
 ```
 
-each [YAML](https://yaml.org/) file specifies the HTML page it maps to, e.g.:\
+## YAML
+
+each [YAML](https://yaml.org/) file specifies the HTML page it maps to, e.g.
+`src/content/en/index.yml` specifies and maps to `dist/en/index.html`.
+
 `src/content/en/index.yml`
 
 ```yaml
-# path of the JSX component factory this page is instantiated from.
+# path of the JSX component factory this page is rendered with.
 # - absolute from the project's source `root` (by default `src/`)
 # - or relative from this file's directory, e.g. `../../components/page`
 factory: components/page
@@ -76,8 +92,14 @@ which include the JSX component `factory` from the referenced JSX file,
 the parsed `props`, and the `path` of the target HTML file,
 relative to the `target` directory (`dist/` in this example).
 
-JSX files expose the component factory as default export,
-from which html pages are rendered:\
+there is no restriction on which properties `props` includes:
+whatever the factory requires.
+
+## JSX
+
+[JSX](https://reactjs.org/docs/jsx-in-depth.html) files expose
+their component factory as default export.
+
 `src/components/page.jsx`:
 
 ```jsx
@@ -87,13 +109,15 @@ import marked from 'marked'
 import { dirname, relative, sep } from 'path'
 
 /**
- * `pages` is a map of `path` to { factory, path, props }
+ * the default export is the JSX component factory.
+ * it expects a page description object consisting of the following properties:
+ * - `pages`: a map of `path` to { factory, path, props }
  *   page description objects for all YAML-specified pages,
  *   where `factory` is the page's component factory (like this one).
  *
- * `path` is the path of the target html file, relative to the `target` folder.
+ * - `path`: the path of the target html file, relative to the `target` folder.
  *
- * `props` is from the YAML file
+ * - `props`: parsed from the YAML file
  */
 export default function ({ pages, path, props }) {
   // this example factory is synchronous, but it doesn't have to be:
@@ -104,8 +128,8 @@ export default function ({ pages, path, props }) {
 
 // in this example, we adopt the convention that html files are hosted
 // in their corresponding locale directory.
-// alternatively, we could simply also have specified the locale
-// in the props (YAML file).
+// alternatively, the locale could simply also have been specified
+// in the props from the YAML file.
 const locale = path =>
   dirname(path)
     .split(sep)
@@ -127,7 +151,7 @@ function Page ({ body, path, title }) {
         <meta name='viewport' content='width=device-width, initial-scale=1.0' />
       </head>
       <body>
-        {marked(body)}
+        {marked(body) /* markdown support is easy to add */}
         <footer>
           <ul>
             {links.map(({ href, label }, index) => (
@@ -145,6 +169,9 @@ function Page ({ body, path, title }) {
 }
 ```
 
+`teet` calls the factory with the page description object parsed from YAML
+and renders the returned JSX component to the destination HTML file.
+
 example output from `teet`:\
 `dist/en/index.html`
 
@@ -158,7 +185,7 @@ assets such as the site manifest or images should be handled separately.
 
 for example, the manifest could be placed in `src/assets/manifest.json`
 and copied together with other assets from that directory into `dist/assets`,
-e.g. with an `npm` script:
+e.g. with a simple `npm` script in the build process:
 
 ```bash
 mkdirp dist/assets && cpx "src/assets/**" dist/assets
@@ -170,6 +197,14 @@ of the `Page` component:
 ```jsx
 <link rel='manifest' href={relative(dirname(path), 'assets/image.png')} />
 ```
+
+likewise, `teet` does not prescribe how to handle CSS.
+in this example, CSS could be added as component-scoped classes
+with tools such as [TypeStyle](https://typestyle.github.io/).
+
+finally, as shown in this example,
+[Markdown](https://github.github.com/gfm/#what-is-markdown-) support is easy to add,
+e.g. with [marked](https://www.npmjs.com/package/marked).
 
 # Usage
 
@@ -215,6 +250,26 @@ export interface ElementSpecMap {
   [path: string]: ElementSpec
 }
 ```
+
+# Why
+
+because [Gatsby](https://gatsbyjs.org) et al. are all too bloated,
+and so is their output HTML.
+
+unless the JSX component factories explicitly add it to their output,
+HTML from `teet` does not include any javascript,
+or for that matter [React](https://reactjs.org).
+
+the resulting static website hence works as expected, without JS.
+for many websites and blogs, that's sufficient, and it's best practice.
+Again, the factories can add client-side frameworks if required,
+but `teet` won't do it by default.
+
+# Name
+
+a simple single syllable nomen still available on npm,
+which is not easy these days,
+and tricky to pronounce properly, like 'sheet'.
 
 # MIT License
 

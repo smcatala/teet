@@ -1,6 +1,6 @@
 {
   "name": "teet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "teet static websites from jsx and yaml, no strings attached",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -23,16 +23,16 @@
     "jsx",
     "yaml"
   ],
-  "author": "Stephane M. Catala <stephane@zenyway.com>",
+  "author": "Stephane M. Catala <smcatala@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zenyway/teet.git"
+    "url": "git+https://github.com/smcatala/teet.git"
   },
   "bugs": {
-    "url": "https://github.com/zenyway/teet/issues"
+    "url": "https://github.com/smcatala/teet/issues"
   },
-  "homepage": "https://github.com/zenyway/teet#readme",
+  "homepage": "https://github.com/smcatala/teet#readme",
   "peerDependencies": {
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
@@ -45,6 +45,7 @@
     "@babel/register": "^7.5.5",
     "clone-deep": "4.0.1",
     "esm": "3.2.25",
+    "findup-sync": "^4.0.0",
     "glob": "7.1.4",
     "glob2base": "0.0.12",
     "js-yaml": "3.13.1",
@@ -61,8 +62,6 @@
     "@types/react-dom": "^16.8.5",
     "@typescript-eslint/eslint-plugin": "1.13.0",
     "@typescript-eslint/parser": "1.13.0",
-    "common-shakeify": "0.6.2",
-    "findup-sync": "^4.0.0",
     "http-server": "0.11.1",
     "husky": "3.0.2",
     "lint-staged": "9.2.1",

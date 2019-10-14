@@ -7,8 +7,9 @@ teet static websites from jsx and yaml, no strings attached.
 # Generate a static website from YAML and JSX
 
 first off, `teet` makes as few assumptions as possible,
-focusing on rendering HTML files from YAML and JSX files where it is told to,
-and remaining as flexible as possible.
+focusing on rendering HTML files
+from [FAILSAFE_SCHEMA YAML](http://www.yaml.org/spec/1.2/spec.html#id2802346)
+and JSX files.
 
 ## Project structure
 
@@ -88,14 +89,18 @@ props:
     Design your website's pages with JSX and specify their content with YAML
 ```
 
-[YAML](https://en.wikipedia.org/wiki/YAML/) files are parsed to page description objects
-`{ factory, path, props }`,
+[YAML](https://en.wikipedia.org/wiki/YAML/) files are parsed
+to page description objects `{ factory, path, props }`,
 which include the JSX component `factory` from the referenced JSX file,
 the parsed `props`, and the `path` of the target HTML file,
 relative to the `target` directory (`dist/` in this example).
 
 there is no restriction on which properties `props` may contain:
 whatever the factory requires.
+However, Yaml syntax is purposefully restricted to the [FAILSAFE_SCHEMA](http://www.yaml.org/spec/1.2/spec.html#id2802346),
+i.e. lists, maps and strings:
+let the factory choose how to safely interpret each prop,
+e.g. markdown, dates, etc.
 
 ## JSX
 
@@ -255,13 +260,15 @@ npm i -D teet
 teet [OPTIONS]
 
 OPTIONS
-  -d, --target  target directory
-                default 'dist'
+  -d, --debug   log debug output to console
   -h, --help    output this usage text
+  -o, --target  target directory
+                default 'dist'
   -r, --root    source root directory
                 default 'src'
   -s, --source  glob of source files to compile, relative to source root
                 default 'content/**/*.y*(a)ml'
+  -w, --watch   rebuild on changes in source files
 ```
 
 ## Node API
@@ -279,62 +286,61 @@ const teet = require('teet')
 ```
 
 `teet` is compiled from [TypeScript](https://www.typescriptlang.org/),
-so it exposes corresponding type definitions, useful for coding.
+and exposes the following type definitions:
 
 ```ts
-import { ReactElement } from 'react'
-export default function (spec: BuildSpec): Promise<void>
+export default function (opts?: Partial<BuildSpec>): Promise<void>
+
 export interface BuildSpec {
+  debug: boolean
+  observer: Observer<RenderedPage | Path>
   root: string
   source: string
   target: string
+  watch: boolean
 }
-export interface ElementSpec<P = any> {
-  factory: (spec: ElementFactorySpec<P>) => ReactElement<P>
-  props: P
+
+export interface Observer<T> {
+  complete: () => void
+  error: (err?: any) => void
+  next: (val?: T) => void
+}
+
+export interface RenderedPage extends Path {
+  html: string
+}
+export interface Path {
   path: string
-}
-export interface ElementFactorySpec<P> {
-  pages: ElementSpecMap
-  props: P
-  path: string
-}
-export interface ElementSpecMap {
-  [path: string]: ElementSpec
 }
 ```
 
 # Why
 
 because [Gatsby](https://gatsbyjs.org) et al. are way too bloated,
-and so is their output HTML.
+and so is their output HTML for simple static sites.
 
 unless the JSX component factories explicitly add it to their output,
 HTML from `teet` does not include any javascript,
 or for that matter [React](https://reactjs.org).
 
-the resulting static website hence works as expected, without JS.
+the resulting static website hence works without JS:
 for many websites and blogs, that's sufficient, and it's best practice.
-Again, the factories can add client-side frameworks if required,
+the factories can add client-side frameworks if required,
 but `teet` won't do it by default.
 
-and also because `teet` is less than 60 lines of easily maintainable code
-building on hand-picked, robust and well-maintained popular dependencies.
-
-and also because its documentation is concise.
+and also because its documentation is concise and it gets out of your way.
 
 # Name
 
 a simple single syllable nomen that was still available on npm
-(which is not easy these days)
-and is tricky to pronounce properly, like 'sheet'.
+(which is not easy these days).
 
 # Mention
 
 if you like or use this project for your websites,
 consider starring it on GitHub,
-or mentioning it in the documentation or README of such websites,
-or even better, on the websites themselves.
+or mentioning it in your project's documentation or README,
+or why not even on the websites themselves ?
 
 # MIT License
 

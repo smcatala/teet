@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * @license MIT
  * @author Stephane M. Catala <stephane@zenyway.com>
@@ -27,46 +26,34 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const minimist = require('minimist')
-const path = require('path')
-const teet = require('../')
+import { Context, State } from './context'
+import { Events } from './events'
+import { ReducerSpecs } from 'funky-store/dist/utils'
+import { KVMap, always } from './utils'
+import { into, pokeProp, propCursor as within } from 'basic-cursors'
 
-var argv = minimist(process.argv.slice(2), {
-  boolean: ['debug', 'watch'],
-  string: ['root', 'source', 'target'],
-  alias: {
-    d: 'debug',
-    h: 'help',
-    o: 'target',
-    r: 'root',
-    s: 'source',
-    w: 'watch'
-  }
-})
+const inCache = within('cache')
+const inFactories = within('factories')
+const inSpecs = within('specs')
 
-if (argv.help) {
-  fs.createReadStream(path.resolve('./usage.txt')).pipe(process.stdout)
-  exit()
+const invalidatePathEntry = <T>(entries: KVMap<false | T>, path: string) =>
+  pokeProp(path)(entries, false)
+
+const setPathEntryFrom = <K extends string>(key: K) => <T>(
+  entries: KVMap<false | T>,
+  entry: { path: string } & { [key in K]: T }
+) => pokeProp(entry.path)(entries, entry[key])
+
+const reducers: Partial<ReducerSpecs<Context, Events>> = {
+  ADD_FACTORY: inFactories(invalidatePathEntry),
+  ADD_SPEC: inSpecs(invalidatePathEntry),
+  FACTORY: inFactories(setPathEntryFrom('factory')),
+  NEXT: inCache(setPathEntryFrom('html')),
+  READY: into('state')(always(State.READY)),
+  SPEC: inSpecs(setPathEntryFrom('spec')),
+  UNLINK_FACTORY: inFactories(invalidatePathEntry),
+  UNLINK_HTML: inCache(invalidatePathEntry),
+  UNLINK_SPEC: inSpecs(invalidatePathEntry)
 }
 
-const spec = {
-  debug: argv.debug,
-  root: argv.root,
-  source: argv.source,
-  target: argv.target,
-  watch: argv.watch
-}
-
-teet(spec)
-  .then(exit)
-  .catch(exit)
-
-function exit (err) {
-  if (!err) {
-    process.exitCode = 0
-  } else {
-    console.error('FATAL ERROR', err)
-    process.exitCode = 1
-  }
-  process.exit()
-}
+export default reducers

@@ -3,6 +3,7 @@ build/
 dist/
 esm/
 node_modules/
+spec/dist/
 spec/reports/
 tmp/
 **/*.log

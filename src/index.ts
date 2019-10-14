@@ -26,125 +26,125 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { safeLoad as parseYaml } from 'js-yaml'
-import { ReactElement } from 'react'
-const { renderToStaticMarkup } = require('react-dom/server')
-import { readFile, writeFile } from 'rw'
+import { Context, Path, RenderedPage, State } from './context'
+import effects from './effects'
+import events, { Events } from './events'
+import reducers from './reducers'
+import triggers from './triggers'
+import createStore from 'funky-store'
+import {
+  concatEffectFactories,
+  createReducer,
+  createEffectFactory,
+  createTrigger
+} from 'funky-store/dist/utils'
+import { Observer, isFunction } from './utils'
+import * as chokidar from 'chokidar'
+import { FSWatcher, WatchOptions } from 'chokidar'
+import * as fs from 'fs'
+import { Glob } from 'glob'
+import * as fspath from 'path'
 import { promisify } from 'util'
-const cloneDeep = require('clone-deep')
-const findup = require('findup-sync')
-const glob = require('glob')
 const glob2base = require('glob2base')
-const fspath = require('path')
-const mkdirp = require('mkdirp')
-const mockable = { mkdirp, writeFile }
+const rw = require('rw')
 
 const ROOT = 'src'
 const SOURCE = 'content/**/*.y*(a)ml'
 const TARGET = 'dist'
-const ENCODING = 'utf8'
-
-const PKG_JSON_PATH = findup('package.json', { cwd: __dirname })
-const BABEL_CONFIG = require(PKG_JSON_PATH).babel
-require('@babel/register')(BABEL_CONFIG)
 
 export interface BuildSpec {
+  debug: boolean
+  observer: Observer<RenderedPage | Path>
   root: string
   source: string
   target: string
+  watch: boolean
 }
 
 export interface Mockable {
-  mkdirp: (path: string, cb: (err?: any, made?: string) => void) => void
-  writeFile: (
-    path: string,
-    data: string,
-    enc: string,
-    cb: (err?: any) => void
-  ) => void
+  getWatcher: (paths: string | string[], opts?: WatchOptions) => FSWatcher
+  mkdirp: (path: string) => Promise<any>
+  readFile: (path: string, enc: string) => Promise<string>
+  unlink: (path: string) => Promise<void>
+  writeFile: (path: string, data: string, enc: string) => Promise<void>
 }
 
-export interface ElementSpec<P = any> {
-  factory: (spec: ElementFactorySpec<P>) => ReactElement<P>
-  props: P
-  path: string
-}
-
-export interface ElementFactorySpec<P> {
-  pages: ElementSpecMap
-  props: P
-  path: string
-}
-
-export interface ElementSpecMap {
-  [path: string]: ElementSpec
-}
-
-export default function ({
-  root = ROOT,
-  source = SOURCE,
-  target = TARGET,
-  mkdirp = mockable.mkdirp,
-  writeFile = mockable.writeFile
-}: BuildSpec & Partial<Mockable>): Promise<void> {
-  const base = fspath.resolve(root, glob2base(new glob.Glob(source)))
-  return promisify(glob)(source, { cwd: fspath.resolve(root) })
-    .then((paths: string[]) =>
-      Promise.all(paths.map(importComponent)).then(toElementSpecMap)
+export default function (
+  {
+    debug,
+    observer: { complete, error, next } = {} as Observer<RenderedPage | Path>,
+    root = ROOT,
+    source = SOURCE,
+    target = TARGET,
+    watch
+  } = {} as Partial<BuildSpec>,
+  {
+    getWatcher = chokidar.watch,
+    mkdirp = promisify<string, void>(require('mkdirp')),
+    readFile = promisify<string, string, string>(rw.readFile),
+    unlink = promisify<string>(fs.unlink),
+    writeFile = promisify<string, string, string, void>(rw.writeFile)
+  } = {} as Partial<Mockable>
+): Promise<void> {
+  const cwd = fspath.resolve(root)
+  const glob = new Glob(source, { cwd })
+  const base = fspath.resolve(cwd, glob2base(glob))
+  const watcher = getWatcher(source, { cwd })
+  return new Promise<void>(function (resolve, reject) {
+    const dispatch = createStore<Context, Events>(
+      createReducer(reducers, {
+        base,
+        cache: Object.create(null),
+        factories: Object.create(null),
+        mkdirp,
+        readFile,
+        root,
+        specs: Object.create(null),
+        state: State.INITIAL_SCAN,
+        target,
+        unlink,
+        watcher,
+        watch,
+        writeFile
+      }),
+      concatEffectFactories(
+        createEffectFactory(effects),
+        createEffectFactory({
+          COMPLETE () {
+            try {
+              watcher.close()
+              complete && complete()
+              resolve()
+            } catch (_err) {
+              reject(_err)
+            }
+          },
+          FATAL (_, err) {
+            try {
+              watcher.close()
+              error && error(err)
+              reject(err)
+            } catch (_err) {
+              reject(_err)
+            }
+          }
+        }),
+        isFunction(next) &&
+          createEffectFactory<Context, Events>({
+            NEXT: (_, payload) => next(payload)
+          }),
+        debug &&
+          (() => (state, action) => {
+            console.log('ACTION:', action)
+            console.log('STATE:', state)
+          })
+      ),
+      createTrigger(triggers)
     )
-    .then((specs: ElementSpecMap) =>
-      Promise.all(Object.keys(specs).map(path => render(specs, path)))
-    )
-    .then((pages: { html: string; path: string }[]) =>
-      pages.reduce(
-        (res, page) => res.then(() => write(page)), // sequential writes
-        Promise.resolve()
-      )
-    )
-
-  function importComponent (path: string): ElementSpec {
-    const filename = fspath.resolve(root, path)
-    return promisify(readFile)(filename, ENCODING)
-      .then(raw => parseYaml(raw, { filename, onWarning }))
-      .then(({ component, props }) =>
-        import(fspath.resolve(root, component)).then(module => ({
-          factory: module.default,
-          path: fspath.relative(base, setExt('.html', filename)),
-          props
-        }))
-      )
-  }
-
-  function render (pages: ElementSpecMap, path: string) {
-    return Promise.resolve(pages[path])
-      .then(({ factory, props }) => factory(cloneDeep({ pages, path, props })))
-      .then(element => ({
-        html: renderToStaticMarkup(element) as string,
-        path
-      }))
-  }
-
-  function write ({ html, path }: { html: string; path: string }) {
-    const filename = fspath.resolve(target, path)
-    return promisify<string>(mkdirp)(fspath.dirname(filename)).then(() =>
-      promisify<string, string, string>(writeFile)(filename, html, ENCODING)
-    )
-  }
+    watcher
+      .on('add', path => dispatch(events.ADD(path)))
+      .on('change', path => dispatch(events.CHANGE(path)))
+      .on('ready', () => dispatch(events.READY()))
+      .on('unlink', path => dispatch(events.UNLINK(path)))
+  })
 }
-
-function toElementSpecMap (specs: ElementSpec[]): ElementSpecMap {
-  return specs.reduce(
-    function (map, spec) {
-      map[spec.path] = spec
-      return map
-    },
-    {} as ElementSpecMap
-  )
-}
-
-function setExt (ext: string, path: string) {
-  const { root, dir, name } = fspath.parse(path)
-  return fspath.format({ root, dir, base: name + ext, name, ext })
-}
-
-const onWarning = console.warn.bind(console, 'WARNING')

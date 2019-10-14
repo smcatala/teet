@@ -1,7 +1,5 @@
 !.gitkeep
-bin/
 build/
-bower_components/
 example/
 node_modules/
 # only export the dist folder to npm (src is in git)

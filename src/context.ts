@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * @license MIT
  * @author Stephane M. Catala <stephane@zenyway.com>
@@ -27,46 +26,54 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const minimist = require('minimist')
-const path = require('path')
-const teet = require('../')
+import { KVMap } from './utils'
+import { FSWatcher } from 'chokidar'
+import { ReactElement } from 'react'
 
-var argv = minimist(process.argv.slice(2), {
-  boolean: ['debug', 'watch'],
-  string: ['root', 'source', 'target'],
-  alias: {
-    d: 'debug',
-    h: 'help',
-    o: 'target',
-    r: 'root',
-    s: 'source',
-    w: 'watch'
-  }
-})
-
-if (argv.help) {
-  fs.createReadStream(path.resolve('./usage.txt')).pipe(process.stdout)
-  exit()
+export interface Context {
+  base: string
+  factories: KVMap<PageFactory | false>
+  mkdirp: (path: string) => Promise<any>
+  cache: KVMap<string | false>
+  readFile: (path: string, enc: string) => Promise<string>
+  root: string
+  specs: KVMap<ParsedYaml | false>
+  state: State
+  target: string
+  unlink: (path: string) => Promise<void>
+  watcher: FSWatcher
+  watch: boolean
+  writeFile: (path: string, data: string, enc: string) => Promise<void>
 }
 
-const spec = {
-  debug: argv.debug,
-  root: argv.root,
-  source: argv.source,
-  target: argv.target,
-  watch: argv.watch
+export enum State {
+  INITIAL_SCAN = 'INITIAL_SCAN',
+  READY = 'READY'
 }
 
-teet(spec)
-  .then(exit)
-  .catch(exit)
+export interface ParsedYaml<P = any> {
+  factory: string
+  props: P
+}
 
-function exit (err) {
-  if (!err) {
-    process.exitCode = 0
-  } else {
-    console.error('FATAL ERROR', err)
-    process.exitCode = 1
-  }
-  process.exit()
+export interface PageFactory<P = any> {
+  (spec: PageFactorySpec<P>): ReactElement<P>
+}
+
+export interface PageFactorySpec<P> extends Path {
+  pages: KVMap<PageSpec>
+  props: P
+}
+
+export interface PageSpec<P = any> extends Path {
+  factory: PageFactory<P>
+  props: P
+}
+
+export interface RenderedPage extends Path {
+  html: string
+}
+
+export interface Path {
+  path: string
 }

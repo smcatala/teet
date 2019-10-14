@@ -34,9 +34,9 @@ const ROOT = join(__dirname, 'fixture')
 const TARGET = join(__dirname, 'dist')
 const TARGET_FILES = {
   'index.html':
-    '<html lang="en"><head><title>A test page</title></head><body><h1>This is a test</h1><ul><li><a href="about">about</a></li></ul></body></html>',
+    '<html lang="en"><head><title>The main test page</title></head><body><h1>This is a test !</h1><ul><li><a href="about">about</a></li></ul></body></html>',
   'about/index.html':
-    '<html lang="en"><head><title>Another test page</title></head><body><h1>this is another test</h1><ul><li><a href="..">..</a></li></ul></body></html>'
+    '<html lang="en"><head><title>The about test page</title></head><body><h1>This is another test !</h1><ul><li><a href="..">..</a></li></ul></body></html>'
 }
 const TARGET_DIRS = Object.keys(TARGET_FILES)
   .map(path => dirname(join(TARGET, path)))
@@ -45,12 +45,17 @@ const TARGET_DIRS = Object.keys(TARGET_FILES)
 test('teet generates target html files from source JSX and YAML files', t => {
   const calls = {}
   t.plan(2)
-  teet({
-    root: ROOT,
-    target: TARGET,
-    mkdirp: nodeAsyncSpy('mkdirp'),
-    writeFile: nodeAsyncSpy('writeFile')
-  })
+  teet(
+    {
+      debug: true,
+      root: ROOT,
+      target: TARGET
+    },
+    {
+      mkdirp: asyncSpy('mkdirp'),
+      writeFile: asyncSpy('writeFile')
+    }
+  )
     .then(function () {
       t.deepEqual(
         calls.mkdirp.map(([path]) => path).sort(),
@@ -68,11 +73,10 @@ test('teet generates target html files from source JSX and YAML files', t => {
     })
     .catch(() => t.fail())
 
-  function nodeAsyncSpy (name) {
+  function asyncSpy (name) {
     return function (...args) {
-      const cb = args.pop()
       calls[name] = append(calls[name], args)
-      cb(null)
+      return Promise.resolve()
     }
   }
 })

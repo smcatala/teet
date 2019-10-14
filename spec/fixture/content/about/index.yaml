@@ -1,4 +1,4 @@
-component: components/test
+factory: components/test
 props:
-  title: Another test page
-  header: this is another test
+  title: The about test page
+  header: This is another test !

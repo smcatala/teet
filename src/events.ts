@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * @license MIT
  * @author Stephane M. Catala <stephane@zenyway.com>
@@ -27,46 +26,42 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-const minimist = require('minimist')
-const path = require('path')
-const teet = require('../')
+import {
+  PageFactory,
+  PageSpec,
+  ParsedYaml,
+  Path,
+  RenderedPage
+} from './context'
+import { KVMap } from './utils'
+import {
+  FactoryAction,
+  createActionFactories,
+  payload as _
+} from 'basic-fsa-factories'
 
-var argv = minimist(process.argv.slice(2), {
-  boolean: ['debug', 'watch'],
-  string: ['root', 'source', 'target'],
-  alias: {
-    d: 'debug',
-    h: 'help',
-    o: 'target',
-    r: 'root',
-    s: 'source',
-    w: 'watch'
-  }
+const events = createActionFactories({
+  ADD: _<string>(),
+  ADD_FACTORY: _<string>(),
+  ADD_SPEC: _<string>(),
+  BUILD: _<KVMap<PageSpec>>(),
+  CHANGE: _<string>(),
+  COMPLETE: _<void>(),
+  ERROR: _<any>(),
+  FACTORY: _<Readonly<{ path: string; factory: PageFactory }>>(),
+  FATAL: _<any>(),
+  NEXT: _<RenderedPage | Path>(),
+  READY: _<void>(),
+  SPEC: _<Readonly<{ path: string; spec: ParsedYaml }>>(),
+  UNLINK: _<string>(),
+  UNLINK_FACTORY: _<string>(),
+  UNLINK_HTML: _<string>(),
+  UNLINK_SPEC: _<string>(),
+  UPDATE: _<RenderedPage[]>(),
+  WATCH_FACTORY: _<string>(),
+  WRITE: _<RenderedPage[]>()
 })
 
-if (argv.help) {
-  fs.createReadStream(path.resolve('./usage.txt')).pipe(process.stdout)
-  exit()
-}
+export type Events = FactoryAction<typeof events>
 
-const spec = {
-  debug: argv.debug,
-  root: argv.root,
-  source: argv.source,
-  target: argv.target,
-  watch: argv.watch
-}
-
-teet(spec)
-  .then(exit)
-  .catch(exit)
-
-function exit (err) {
-  if (!err) {
-    process.exitCode = 0
-  } else {
-    console.error('FATAL ERROR', err)
-    process.exitCode = 1
-  }
-  process.exit()
-}
+export default events

@@ -27,21 +27,21 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { KVMap } from './utils'
-import { FSWatcher } from 'chokidar'
+import { IGlob } from 'glob'
 import { ReactElement } from 'react'
 
 export interface Context {
   base: string
-  factories: KVMap<PageFactory | false>
-  mkdirp: (path: string) => Promise<any>
   cache: KVMap<string | false>
+  factories: KVMap<ComponentFactory | false>
+  glob: IGlob
+  mkdirp: (path: string) => Promise<any>
   readFile: (path: string, enc: string) => Promise<string>
   root: string
   specs: KVMap<ParsedYaml | false>
   state: State
   target: string
   unlink: (path: string) => Promise<void>
-  watcher: FSWatcher
   watch: boolean
   writeFile: (path: string, data: string, enc: string) => Promise<void>
 }
@@ -54,23 +54,26 @@ export enum State {
 export interface ParsedYaml<P = any> {
   factory: string
   props: P
+  render: boolean
 }
 
-export interface PageFactory<P = any> {
-  (spec: PageFactorySpec<P>): ReactElement<P>
+export interface ComponentFactory<P = any> {
+  (spec: ComponentFactorySpec<P>): ReactElement<P>
 }
 
-export interface PageFactorySpec<P> extends Path {
-  pages: KVMap<PageSpec>
+export interface ComponentFactorySpec<P> extends Path {
+  components: KVMap<ComponentSpec>
   props: P
+  render: boolean
 }
 
-export interface PageSpec<P = any> extends Path {
-  factory: PageFactory<P>
+export interface ComponentSpec<P = any> extends Path {
+  factory: ComponentFactory<P>
   props: P
+  render: boolean
 }
 
-export interface RenderedPage extends Path {
+export interface RenderedComponent extends Path {
   html: string
 }
 

@@ -34,9 +34,9 @@ const ROOT = join(__dirname, 'fixture')
 const TARGET = join(__dirname, 'dist')
 const TARGET_FILES = {
   'index.html':
-    '<html lang="en"><head><title>The main test page</title></head><body><h1>This is a test !</h1><ul><li><a href="about">about</a></li></ul></body></html>',
+    '<html lang="en"><head><title>The main test page</title></head><body><h1>This is a test !</h1><ul><li><a href="about">about</a></li></ul><p>{&quot;path&quot;:&quot;index.html&quot;}</p></body></html>',
   'about/index.html':
-    '<html lang="en"><head><title>The about test page</title></head><body><h1>This is another test !</h1><ul><li><a href="..">..</a></li></ul></body></html>'
+    '<html lang="en"><head><title>The about test page</title></head><body><h1>This is another test !</h1><ul><li><a href="..">..</a></li></ul><p>{&quot;path&quot;:&quot;about/index.html&quot;}</p></body></html>'
 }
 const TARGET_DIRS = Object.keys(TARGET_FILES)
   .map(path => dirname(join(TARGET, path)))

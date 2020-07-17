@@ -26,8 +26,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Context, Path, RenderedPage, State } from './context'
-import effects from './effects'
+import { Context, Path, RenderedComponent, State } from './context'
+import effects, { renderComponent } from './effects'
 import events, { Events } from './events'
 import reducers from './reducers'
 import triggers from './triggers'
@@ -45,6 +45,7 @@ import * as fs from 'fs'
 import { Glob } from 'glob'
 import * as fspath from 'path'
 import { promisify } from 'util'
+const findup = require('findup-sync')
 const glob2base = require('glob2base')
 const rw = require('rw')
 
@@ -52,9 +53,15 @@ const ROOT = 'src'
 const SOURCE = 'content/**/*.y*(a)ml'
 const TARGET = 'dist'
 
+const PKG_JSON_PATH = findup('package.json', { cwd: __dirname })
+const BABEL_CONFIG = require(PKG_JSON_PATH).babel
+require('@babel/register')(BABEL_CONFIG)
+
+export { renderComponent }
+
 export interface BuildSpec {
   debug: boolean
-  observer: Observer<RenderedPage | Path>
+  observer: Observer<RenderedComponent | Path>
   root: string
   source: string
   target: string
@@ -72,7 +79,9 @@ export interface Mockable {
 export default function (
   {
     debug,
-    observer: { complete, error, next } = {} as Observer<RenderedPage | Path>,
+    observer: { complete, error, next } = {} as Observer<
+      RenderedComponent | Path
+    >,
     root = ROOT,
     source = SOURCE,
     target = TARGET,
@@ -89,13 +98,15 @@ export default function (
   const cwd = fspath.resolve(root)
   const glob = new Glob(source, { cwd })
   const base = fspath.resolve(cwd, glob2base(glob))
-  const watcher = getWatcher(source, { cwd })
+  const watcher = getWatcher('.', { cwd })
+
   return new Promise<void>(function (resolve, reject) {
     const dispatch = createStore<Context, Events>(
       createReducer(reducers, {
         base,
         cache: Object.create(null),
         factories: Object.create(null),
+        glob,
         mkdirp,
         readFile,
         root,
@@ -103,7 +114,6 @@ export default function (
         state: State.INITIAL_SCAN,
         target,
         unlink,
-        watcher,
         watch,
         writeFile
       }),
@@ -134,7 +144,10 @@ export default function (
             NEXT: (_, payload) => next(payload)
           }),
         debug &&
-          (() => (state, action) => {
+          (() => (
+            { glob, mkdirp, readFile, unlink, writeFile, ...state },
+            action
+          ) => {
             console.log('ACTION:', action)
             console.log('STATE:', state)
           })

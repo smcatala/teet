@@ -26,25 +26,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Context, RenderedPage, PageSpec } from './context'
+import { Context, RenderedComponent, ComponentSpec } from './context'
 import events, { Events } from './events'
 import { EffectSpecs } from 'funky-store/dist/utils'
-import {
-  KVMap,
-  basicDeepClone,
-  isFunction,
-  isString,
-  rejectOnThrow
-} from './utils'
+import { KVMap, basicDeepClone, isFunction, isString } from './utils'
 import { safeLoad as parseYaml, FAILSAFE_SCHEMA } from 'js-yaml'
 import * as fspath from 'path'
 import { renderToStaticMarkup } from 'react-dom/server'
 const ENCODING = 'utf8'
-
-const findup = require('findup-sync')
-const PKG_JSON_PATH = findup('package.json', { cwd: __dirname })
-const BABEL_CONFIG = require(PKG_JSON_PATH).babel
-require('@babel/register')(BABEL_CONFIG)
 
 const YAML_PARSER_SPECS = {
   onWarning: console.warn.bind(console, 'WARNING'),
@@ -70,7 +59,7 @@ const effects: Partial<EffectSpecs<Context, Events>> = {
   async ADD_SPEC ({ readFile, root }, path) {
     try {
       const raw = await readFile(fspath.resolve(root, path), ENCODING)
-      const { factory, props } = await parseYaml(raw, {
+      const { factory, props, render } = parseYaml(raw, {
         ...YAML_PARSER_SPECS,
         filename: path
       })
@@ -84,7 +73,8 @@ const effects: Partial<EffectSpecs<Context, Events>> = {
             root,
             require.resolve(fspath.resolve(root, factory.valueOf()))
           ),
-          props
+          props,
+          render
         }
       })
     } catch (err) {
@@ -92,7 +82,7 @@ const effects: Partial<EffectSpecs<Context, Events>> = {
     }
   },
   BUILD: (_, pages) =>
-    renderPages(pages)
+    renderComponents(pages)
       .then(events.UPDATE)
       .catch(events.ERROR),
   async UNLINK_HTML ({ target, unlink }, path) {
@@ -104,7 +94,6 @@ const effects: Partial<EffectSpecs<Context, Events>> = {
       return events.ERROR(err)
     }
   },
-  WATCH_FACTORY: ({ watcher }, path) => void watcher.add(path),
   WRITE: ({ mkdirp, target, writeFile }, [update, ...updates]) =>
     write(mkdirp, writeFile, fspath.resolve(target, update.path), update.html)
       .then(() => events.UPDATE(updates))
@@ -114,26 +103,34 @@ const effects: Partial<EffectSpecs<Context, Events>> = {
 /**
  * throws if any page throws when rendered
  */
-function renderPages (pages: KVMap<PageSpec>): Promise<RenderedPage[]> {
-  return Promise.all(Object.keys(pages).map(path => renderPage(pages, path)))
+function renderComponents (
+  pages: KVMap<ComponentSpec>
+): Promise<RenderedComponent[]> {
+  return Promise.all(
+    Object.keys(pages).map(path => renderComponent(pages, path))
+  )
 }
 
-function renderPage (
-  pages: KVMap<PageSpec>,
-  path: string
-): Promise<RenderedPage> {
-  return Promise.resolve(pages[path])
-    .then(
-      rejectOnThrow(({ factory, props }) =>
-        factory(basicDeepClone({ pages, path, props }))
-      )
+export async function renderComponent (
+  components: KVMap<ComponentSpec>,
+  path: string,
+  attrs?: object
+): Promise<RenderedComponent> {
+  try {
+    const { factory, props, render } = components[path]
+    const element = factory(
+      basicDeepClone({
+        components,
+        path,
+        props: { ...props, ...attrs },
+        render
+      })
     )
-    .then(
-      rejectOnThrow(element => ({
-        html: renderToStaticMarkup(element) as string,
-        path
-      }))
-    )
+    const html = renderToStaticMarkup(element) as string
+    return { html, path }
+  } catch (err) {
+    return Promise.reject(err)
+  }
 }
 
 function write (

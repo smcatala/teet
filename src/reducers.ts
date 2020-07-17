@@ -36,7 +36,10 @@ const inCache = within('cache')
 const inFactories = within('factories')
 const inSpecs = within('specs')
 
-const invalidatePathEntry = <T>(entries: KVMap<false | T>, path: string) =>
+const invalidatePathEntry: <T>(
+  entries: KVMap<false | T>,
+  path: string
+) => Pick<KVMap<false | T>, string> & Record<string, false> = (entries, path) =>
   pokeProp(path)(entries, false)
 
 const setPathEntryFrom = <K extends string>(key: K) => <T>(

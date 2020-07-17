@@ -14,14 +14,14 @@ and JSX files.
 ## Project structure
 
 `teet` will map the directory structure of the source [YAML](https://en.wikipedia.org/wiki/YAML/)
-files to that of the output HTML files.
-the directory structure of the source [YAML](https://en.wikipedia.org/wiki/YAML/) files
-should therefore reflect the structure of the resulting website.
+files declared as pages to that of the output HTML files.
+the directory structure of the source [YAML](https://en.wikipedia.org/wiki/YAML/)
+page files should therefore reflect the structure of the resulting website.
 apart from that, `teet` makes no further assumptions on where files are located.
 
 `teet` operates from a configurable source `root` folder.
-it will look for all [YAML](https://en.wikipedia.org/wiki/YAML/) files in that `root` folder
-that match a `source` glob string.
+it will look for all [YAML](https://en.wikipedia.org/wiki/YAML/) files
+in that `root` folder that match a `source` glob string.
 
 the `root` folder defaults to `src/`,
 and the `source` file glob to `content/**/*.y*(a)ml`.
@@ -29,13 +29,16 @@ and the `source` file glob to `content/**/*.y*(a)ml`.
 for example, with the default settings,
 the source directory could be set up as follows:
 
-- a `components/` folder for the [JSX](https://reactjs.org/docs/jsx-in-depth.html)
+- a `layouts/` folder for the [JSX](https://reactjs.org/docs/jsx-in-depth.html)
   layout files,
-- a `content/` directory for the [YAML](https://en.wikipedia.org/wiki/YAML/) content files.
+- a `content/` directory for the [YAML](https://en.wikipedia.org/wiki/YAML/)
+  content files.
 
 ```
 src
-├── components
+├── layouts
+│   ├── header.jsx
+│   ├── footer.jsx
 │   └── page.jsx
 └── content
     ├── about
@@ -45,12 +48,19 @@ src
     │       └── index.yml
     ├── en
     │   └── index.yml
-    └── fr
-        └── index.yml
+    ├── fr
+    │   └── index.yml
+    └── lib
+        ├── header
+        │   ├── en.yml
+        │   └── fr.yml
+        └── footer
+            ├── en.yml
+            └── fr.yml
 ```
 
-`teet` will map the directory structure under the base path of the `source` glob
-(`content/` in this example)
+`teet` will map the directory structure of page files
+under the base path of the `source` glob (`content/` in this example)
 to that of its output in a specifiable `target` directory, `dist` by default:
 
 ```
@@ -66,38 +76,59 @@ dist
     └── index.html
 ```
 
+in the above example, files in the `lib/` folder are not specified as pages
+(more on that in the following section).
+hence the resulting `dist` structure does not include a `lib/` sub-directory.
+the corresponding `header` and `footer` components are however rendered into
+the pages that integrate them.
+
 ## YAML
 
 each [YAML](https://en.wikipedia.org/wiki/YAML) file specifies
-the content of the HTML page it maps to. in the above example,
-`src/content/en/index.yml` maps to `dist/en/index.html`,
-and specifies its content.
+the content of an HTML component it maps to.
+
+- by default, the resulting component is available for integration
+  in any other component and can be referenced by its relative path
+  in the `source` file glob.
+- additionally, HTML components that are specifically declared as a page are
+  rendered to a corresponding HTML file in the `target` directory:
+  in the above example, `src/content/en/index.yml` maps to `dist/en/index.html`,
+  and specifies its content.
 
 `src/content/en/index.yml`
 
 ```yaml
 # path of the JSX component factory this page is rendered with.
 # - absolute from the project's source `root` (by default `src/`)
-# - or relative from this file's directory, e.g. `../../components/page`
-factory: components/page
+# - or relative from this file's directory, e.g. `../../layouts/page`
+factory: layouts/page
+
+# render to `target` folder, i.e. this component is a page component.
+# if absent or `false`, this component is merely available to other components,
+# referred by its relative path in the `source` glob.
+render: true
 
 # props supplied to the JSX component factory.
 props:
   title: Teet static websites
   body: |
     # JSX & YAML
-    Design your website's pages with JSX and specify their content with YAML
+    Design your website's layout with JSX and specify its content with YAML
 ```
 
 [YAML](https://en.wikipedia.org/wiki/YAML/) files are parsed
-to page description objects `{ factory, path, props }`,
+to component description objects `{ factory, path, props, render }`,
 which include the JSX component `factory` from the referenced JSX file,
-the parsed `props`, and the `path` of the target HTML file,
-relative to the `target` directory (`dist/` in this example).
+the parsed `props` and `render` entries,
+and a `path` that uniquely references this component,
+e.g. `en` for `src/content/en/index.yml` in the above example.
+the `path` is essentially the `dirname` of the file relative to the `source` glob,
+concatenated with the `basename` excluding its `extension` if not `index`.
 
 there is no restriction on which properties `props` may contain:
 whatever the factory requires.
-However, Yaml syntax is purposefully restricted to the [FAILSAFE_SCHEMA](http://www.yaml.org/spec/1.2/spec.html#id2802346),
+However, Yaml syntax is purposefully restricted to
+the [FAILSAFE_SCHEMA](http://www.yaml.org/spec/1.2/spec.html#id2802346),
 i.e. lists, maps and strings:
 let the factory choose how to safely interpret each prop,
 e.g. markdown, dates, etc.
@@ -110,44 +141,51 @@ they generate a page's layout, i.e. its HTML.
 
 [JSX](https://reactjs.org/docs/jsx-in-depth.html) files expose
 a component factory as default export.
-These factories return a React Element from the page description object
+These factories return a React Element from the component description object
 they receive. `teet` renders the resulting React Elements into the HTML
 of the pages.
 
-`src/components/page.jsx`:
+`src/layouts/page.jsx`:
 
 ```jsx
 /** @jsx createElement */
 import { createElement } from 'react'
 import marked from 'marked'
 import { dirname, relative, sep } from 'path'
+import { renderComponent } from 'teet'
 
 /**
  * the default export is the JSX component factory.
- * it expects a page description object consisting of the following properties:
- * - `pages`: a map of `path` to { factory, path, props }
- *   page description objects for all YAML-specified pages,
- *   where `factory` is the page's component factory (like this one).
- * - `path`: the path of the target html file, relative to the `target` folder.
- * - `props`: parsed from the YAML file
+ * it expects a component description object consisting of the following properties:
+ * - `components`: a map of `path` to { factory, path, props, render }
+ *   component description objects for all YAML-specified components,
+ *   where `factory` is the component's factory (like this one).
+ * - `path`: the path of this component relative to the `source` glob,
+ *   excluding its basename extension and even its basename if it is `index`.
+ * - `props`: object parsed from the YAML file
+ * - `render`: boolean parsed from the YAML file
  */
-export default function ({ pages, path, props }) {
-  // this example factory is synchronous, but it doesn't have to be:
-  // it could also be async, i.e. return a Promise,
-  // e.g. to fetch additional content from the filesystem or an API
-  return <Page path={path} {...props} />
+export default function ({ components, path, props }) {
+  const header = renderComponent(components, 'lib/header')
+  /* this example factory is synchronous, but it doesn't have to be:
+   * it could also be async, i.e. return a Promise that resolves to an Element,
+   * e.g. to fetch additional content from the filesystem or an API
+   */
+  return <Page path={path} header={header} {...props} />
 }
 
-// in this example, we adopt the convention that html files are hosted
-// in their corresponding locale directory.
-// alternatively, the locale could simply also have been specified
-// in the props from the YAML file.
+/**
+ * in this example, we adopt the convention that html files are hosted
+ * in their corresponding locale directory.
+ * alternatively, the locale could simply also have been specified
+ * in the props from the YAML file.
+ */
 const locale = path =>
   dirname(path)
     .split(sep)
     .pop()
 
-function Page ({ body, path, title }) {
+function Page ({ body, header, path, title }) {
   const lang = locale(path)
   const links = Object.keys(pages)
     .filter(target => target !== path && locale(target) === lang)
@@ -193,7 +231,7 @@ JSX is now so widely adopted that documentation and examples abound on the web.
 
 `teet` calls the JSX component factories referenced in each YAML file
 with the `props` parsed from those as detailed [above](#JSX),
-and renders the returned components to the destination HTML files.
+and renders the returned layouts to the destination HTML files.
 
 example output from `teet`:\
 `dist/en/index.html`
@@ -317,14 +355,14 @@ export interface Path {
 # Why
 
 because [Gatsby](https://gatsbyjs.org) et al. are way too bloated,
-and so is their output HTML for simple static sites.
+and so is their output HTML, for simple static sites.
 
 unless the JSX component factories explicitly add it to their output,
 HTML from `teet` does not include any javascript,
 or for that matter [React](https://reactjs.org).
 
 the resulting static website hence works without JS:
-for many websites and blogs, that's sufficient, and it's best practice.
+for many websites and blogs, that's sufficient.
 the factories can add client-side frameworks if required,
 but `teet` won't do it by default.
 
@@ -333,7 +371,7 @@ and also because its documentation is concise and it gets out of your way.
 # Name
 
 a simple single syllable nomen that was still available on npm
-(which is not easy these days).
+(not easy these days).
 
 # Mention
 

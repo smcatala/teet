@@ -1,10 +1,11 @@
 /** @jsx createElement */
 import { createElement } from 'react'
 import { dirname, relative } from 'path'
+import Sub from './sub'
 
-export default function ({ pages, path, props: { title, header } }) {
-  delete pages[path]
-  const paths = Object.keys(pages).map(target =>
+export default function ({ components, path, props: { title, header } }) {
+  delete components[path]
+  const paths = Object.keys(components).map(target =>
     relative(dirname(path), dirname(target))
   )
   return (
@@ -23,6 +24,7 @@ export default function ({ pages, path, props: { title, header } }) {
             </li>
           ))}
         </ul>
+        <Sub path={path} />
       </body>
     </html>
   )

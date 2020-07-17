@@ -38,18 +38,6 @@ export interface KVMap<V> {
   [key: string]: V
 }
 
-export function rejectOnThrow<F extends Function> (fn: F) {
-  return (function (...args: any) {
-    let result
-    try {
-      result = fn(...args)
-    } catch (err) {
-      return Promise.reject(err)
-    }
-    return Promise.resolve(result)
-  } as Function) as F
-}
-
 export function always<T> (value?: T) {
   return function (): T {
     return value

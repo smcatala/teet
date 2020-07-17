@@ -26,7 +26,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Context, State, PageFactory, PageSpec, ParsedYaml } from './context'
+import {
+  Context,
+  State,
+  ComponentFactory,
+  ComponentSpec,
+  ParsedYaml
+} from './context'
 import events, { Events } from './events'
 import { TriggerSpecs } from 'funky-store/dist/utils'
 import { KVMap, setExt } from './utils'
@@ -38,18 +44,17 @@ const buildWhenReadyAndBuildable = ({ base, factories, root, specs, state }) =>
     getPages(
       fspath.relative(root, base),
       specs as KVMap<ParsedYaml>,
-      factories as KVMap<PageFactory>
+      factories as KVMap<ComponentFactory>
     )
   )
 
 const triggers: Partial<TriggerSpecs<Context, Events>> = {
-  ADD: ({ factories }, path) =>
-    (path in factories ? events.ADD_FACTORY : events.ADD_SPEC)(path),
+  ADD: ({ glob }, path) => glob.minimatch.match(path) && events.ADD_SPEC(path),
   FACTORY: buildWhenReadyAndBuildable,
-  SPEC: (context, { spec: { factory } }) => [
-    buildWhenReadyAndBuildable(context),
-    !(factory in context.factories) && events.WATCH_FACTORY(factory)
-  ],
+  SPEC: (context, { spec: { factory } }) =>
+    !context.factories[factory]
+      ? events.ADD_FACTORY(factory)
+      : buildWhenReadyAndBuildable(context),
   UNLINK: ({ factories }, path) =>
     (path in factories ? events.UNLINK_FACTORY : events.UNLINK_SPEC)(path),
   UNLINK_HTML: (_, path) => events.NEXT({ path }),
@@ -65,7 +70,6 @@ const triggers: Partial<TriggerSpecs<Context, Events>> = {
       : cache[update.path] === update.html
       ? events.UPDATE(updates)
       : events.WRITE([update, ...updates]),
-  WATCH_FACTORY: (_, path) => events.UNLINK_FACTORY(path),
   WRITE: (_, [update]) => events.NEXT(update)
 }
 triggers.CHANGE = triggers.ADD
@@ -73,14 +77,14 @@ triggers.CHANGE = triggers.ADD
 function isReadyAndBuildable (
   state: State,
   specs: KVMap<ParsedYaml | false>,
-  factories: KVMap<PageFactory | false>
+  factories: KVMap<ComponentFactory | false>
 ): boolean {
   return state === State.READY && isAllParsed(specs, factories)
 }
 
 function isAllParsed (
   specs: KVMap<ParsedYaml | false>,
-  factories: KVMap<PageFactory | false>
+  factories: KVMap<ComponentFactory | false>
 ): boolean {
   for (const path of Object.keys(specs)) {
     const spec = specs[path]
@@ -92,14 +96,16 @@ function isAllParsed (
 function getPages (
   base: string, // relative to root
   specs: KVMap<ParsedYaml<any>>,
-  factories: KVMap<PageFactory<any>>
-): KVMap<PageSpec> {
+  factories: KVMap<ComponentFactory<any>>
+): KVMap<ComponentSpec> {
   const pages = Object.create(null)
   for (const sourcePath of Object.keys(specs)) {
     const spec = specs[sourcePath]
-    const factory = factories[spec.factory]
-    const path = getRelativeTargetPath(base, sourcePath)
-    pages[path] = { factory, path, props: spec.props }
+    if (spec.render) {
+      const factory = factories[spec.factory]
+      const path = getRelativeTargetPath(base, sourcePath)
+      pages[path] = { factory, path, props: spec.props }
+    }
   }
   return pages
 }

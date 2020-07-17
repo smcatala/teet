@@ -27,11 +27,11 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {
-  PageFactory,
-  PageSpec,
+  ComponentFactory,
+  ComponentSpec,
   ParsedYaml,
   Path,
-  RenderedPage
+  RenderedComponent
 } from './context'
 import { KVMap } from './utils'
 import {
@@ -44,22 +44,21 @@ const events = createActionFactories({
   ADD: _<string>(),
   ADD_FACTORY: _<string>(),
   ADD_SPEC: _<string>(),
-  BUILD: _<KVMap<PageSpec>>(),
+  BUILD: _<KVMap<ComponentSpec>>(),
   CHANGE: _<string>(),
   COMPLETE: _<void>(),
   ERROR: _<any>(),
-  FACTORY: _<Readonly<{ path: string; factory: PageFactory }>>(),
+  FACTORY: _<Readonly<{ path: string; factory: ComponentFactory }>>(),
   FATAL: _<any>(),
-  NEXT: _<RenderedPage | Path>(),
+  NEXT: _<RenderedComponent | Path>(),
   READY: _<void>(),
   SPEC: _<Readonly<{ path: string; spec: ParsedYaml }>>(),
   UNLINK: _<string>(),
   UNLINK_FACTORY: _<string>(),
   UNLINK_HTML: _<string>(),
   UNLINK_SPEC: _<string>(),
-  UPDATE: _<RenderedPage[]>(),
-  WATCH_FACTORY: _<string>(),
-  WRITE: _<RenderedPage[]>()
+  UPDATE: _<RenderedComponent[]>(),
+  WRITE: _<RenderedComponent[]>()
 })
 
 export type Events = FactoryAction<typeof events>

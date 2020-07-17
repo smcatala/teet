@@ -1,4 +1,5 @@
 factory: components/test
+render: true
 props:
   title: The about test page
   header: This is another test !

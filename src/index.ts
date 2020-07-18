@@ -89,7 +89,7 @@ export default function (
   } = {} as Partial<BuildSpec>,
   {
     getWatcher = chokidar.watch,
-    mkdirp = promisify<string, void>(require('mkdirp')),
+    mkdirp = require('mkdirp'),
     readFile = promisify<string, string, string>(rw.readFile),
     unlink = promisify<string>(fs.unlink),
     writeFile = promisify<string, string, string, void>(rw.writeFile)

@@ -201,7 +201,7 @@ function Page ({ body, header, path, title }) {
         <meta name='viewport' content='width=device-width, initial-scale=1.0' />
       </head>
       <body>
-        {marked(body) /* markdown support is easy to add */}
+        <main dangerouslySetInnerHTML={{ __html: marked(body) }} />
         <footer>
           <ul>
             {links.map(({ href, label }, index) => (
@@ -276,7 +276,8 @@ into the `<head>` of the `Page` component.
 finally, as shown in this example,
 [Markdown](https://github.github.com/gfm/#what-is-markdown-) support
 is easy to add in the JSX component factories,
-e.g. with [marked](https://www.npmjs.com/package/marked).
+e.g. with [marked](https://www.npmjs.com/package/marked),
+or [react-markdown](https://www.npmjs.com/package/react-markdown) if html should be escaped.
 how `markdown` is parsed from the `props` is therefore fully configurable.
 
 # Usage
@@ -308,6 +309,30 @@ OPTIONS
                 default 'content/**/*.y*(a)ml'
   -w, --watch   rebuild on changes in source files
 ```
+
+## Live-reload server
+
+during development, a live-reload server such as [https://www.npmjs.com/package/react-markdown] may be set-up e.g. with an npm script in `package.json`:
+
+```json
+"scripts": {
+  "serve": "live-server --port=6510 --no-browser dist",
+  "watch": "concurrently \"npm run serve\" \"teet -d -w\""
+},
+"devDependencies": {
+  "concurrently": "5.2.0",
+  "live-server": "1.2.1",
+  "teet": "0.3.1"
+}
+```
+
+to start the live-reload server:
+
+```bash
+npm run watch
+```
+
+then open a browser at `localhost:6510` to view the `dist` directory
 
 ## Node API
 
